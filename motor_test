@@ -20,8 +20,8 @@ void setup() {
  pinMode(MR_PWM, OUTPUT);
 
 
- analogWrite(MR_PWM, 1);
- analogWrite(ML_PWM, 1);
+ analogWrite(MR_PWM, 210);
+ analogWrite(ML_PWM, 210);
  digitalWrite(MR_1, 0);
  digitalWrite(MR_2, 1);
  digitalWrite(ML_1, 0);
@@ -30,7 +30,15 @@ void setup() {
 
 
 void loop() {
- // put your main code here, to run repeatedly:
+  if ((analogRead(IR1) < 400) & (analogRead(IR2) < 400) & (analogRead(IR3) < 400) & (analogRead(IR4) < 400)){
+    digitalWrite(MR_1, HIGH);
+    digitalWrite(MR_2, LOW);
+    digitalWrite(ML_1, HIGH);
+    digitalWrite(ML_2, LOW);
+    Serial.println("stopped");
+  }
+}
+
 
 
 }
