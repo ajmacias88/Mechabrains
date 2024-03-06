@@ -1,0 +1,229 @@
+#define INPUT_PIN         A0
+
+#define IR_1              A1
+#define IR_2              A2
+#define IR_3              A3
+#define IR_4              A4
+
+
+#define MR_1              13
+#define MR_2              12
+#define MR_PWM            11
+
+
+#define ML_1              8
+#define ML_2              9
+#define ML_PWM           10
+
+
+#define TIMER_30          500      //30
+#define TIMER_60          500      //60
+#define TIMER_90          500      //90 
+#define TIMER_120          500      //120
+#define TIMER_150          500      //150
+#define TIMER_180          500      //180
+#define LINEDELAY            500      //ignore start box
+#define DELAY_2          500      // drive to contact zone
+#define DELAY_3          500      // drive to contact zone
+
+
+
+
+volatile byte state;
+int       count = 0;
+int           timer;
+
+
+/*---------------State Definitions--------------------------*/
+typedef enum {
+ ORIENTING, LINE_FINDING_A, LINE_FINDING_B, LINE_FOLLOWING_A, LINE_FOLLOWING_B, CONTACT_ZONE_A, CONTACT_ZONE_B, SHOOTING_A, SHOOTING_B, CELEBRATION
+} States_t;
+
+
+void f_run() {
+ digitalWrite(MR_1, HIGH);
+ digitalWrite(MR_2, LOW);
+ digitalWrite(ML_1, HIGH);
+ digitalWrite(ML_2, LOW);
+}
+
+
+void b_run() {
+ digitalWrite(MR_1, LOW);
+ digitalWrite(MR_2, HIGH);
+ digitalWrite(ML_1, LOW);
+ digitalWrite(ML_2, HIGH);
+}
+
+
+void stop() {
+ digitalWrite(MR_1, LOW);
+ digitalWrite(MR_2, LOW);
+ digitalWrite(ML_1, LOW);
+ digitalWrite(ML_2, LOW);
+}
+
+
+void right() {
+ digitalWrite(MR_1, HIGH);
+ digitalWrite(MR_2, LOW);
+ digitalWrite(ML_1, LOW);
+ digitalWrite(ML_2, HIGH);
+}
+
+
+void left() {
+ digitalWrite(MR_1, LOW);
+ digitalWrite(MR_2, HIGH);
+ digitalWrite(ML_1, HIGH);
+ digitalWrite(ML_2, LOW);
+}
+
+
+void setup() {
+ // put your setup code here, to run once
+ pinMode(INPUT_PIN, INPUT);
+ pinMode(MR_1, OUTPUT);
+ pinMode(MR_2, OUTPUT);
+ pinMode(ML_PWM, OUTPUT);
+ pinMode(ML_1, OUTPUT);
+ pinMode(ML_2, OUTPUT);
+ pinMode(MR_PWM, OUTPUT);
+
+ analogWrite(MR_PWM, 0);
+ analogWrite(ML_PWM, 0);
+ digitalWrite(MR_1, 0);
+ digitalWrite(MR_2, 1);
+ digitalWrite(ML_1, 0);
+ digitalWrite(ML_2, 1);
+
+ state = LINE_FINDING_A;
+}
+
+
+void loop() {
+ // put your main code here, to run repeatedly:
+ switch (state) {
+   case ORIENTING:
+    
+     
+
+
+   case LINE_FINDING_A:
+     timer = millis();
+     while (millis() - timer >= LINEDELAY) {
+       f_run();
+     }
+     if (analogRead(IR_2) < 400) {
+       stop();
+     }
+     while (analogRead(IR_4) > 400) {
+       right();
+     }
+     stop();
+     state = LINE_FOLLOWING_A;
+
+
+   case LINE_FINDING_B:
+     timer = millis();
+     while (millis() - timer >= LINEDELAY) {
+       f_run();
+     }
+     if (analogRead(IR_2) < 400) {
+       stop();
+     }
+     while (analogRead(IR_4) > 400) {
+       left();
+     }
+     stop();
+     state = LINE_FOLLOWING_B;
+
+
+   case LINE_FOLLOWING_A:
+     while (analogRead(IR_1) < 400 || analogRead(IR_2) < 400 || analogRead(IR_3) < 400) {
+       f_run();
+     }
+     state = CONTACT_ZONE_A;
+
+
+   case LINE_FOLLOWING_B:
+     while (analogRead(IR_1) > 400 || analogRead(IR_2) > 400 || analogRead(IR_3) > 400) {
+       f_run();
+     }
+     state = CONTACT_ZONE_A;
+     state = CONTACT_ZONE_B;
+
+
+   case CONTACT_ZONE_A:
+     if (analogRead(IR_1) < 400){
+      timer = millis();
+      while (millis() - timer >= TIMER_90){
+        left();
+      }
+      timer = millis();
+      while (millis() - timer >= DELAY_2){
+        f_run();
+      }
+      //analogWrite(S_PWM, 255);
+      timer = millis();
+      while (millis() - timer >= TIMER_90){
+        right();
+      }
+     }
+
+
+     state = SHOOTING_A;
+
+
+
+
+   case CONTACT_ZONE_B:
+    if (analogRead(IR_2) < 400){
+      timer = millis();
+      while (millis() - timer >= TIMER_90){
+        right();
+      }
+      timer = millis();
+      while (millis() - timer >= DELAY_2){
+        f_run();
+      }
+      stop();
+      //analogWrite(S_PWM, 255);
+      timer = millis();
+      while (millis() - timer >= TIMER_90){
+        right();
+      }
+     }
+     state = SHOOTING_B;
+
+
+
+
+   case SHOOTING_A:
+    timer = millis();
+    while (millis() - timer >= DELAY_3) {
+      f_run();
+    }
+    stop();
+    //analogWrite(S2_PWM, 150);
+    state = CELEBRATION;
+
+
+
+
+   case SHOOTING_B:
+    timer = millis();
+    while (millis() - timer >= DELAY_3) {
+      b_run();
+    }
+    stop();
+    //analogWrite(S2_PWM, 150);
+     state = CELEBRATION;
+
+
+
+
+   case CELEBRATION:
+   break;
+ }
+}
