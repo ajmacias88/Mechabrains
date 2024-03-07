@@ -18,7 +18,7 @@ const int backUSEcho = 7;
 const int backOUT = 13;
 
 int count = 0;
-int type = 4;
+int type = 1;
 int freq1 = 100;
 int wallDistance = 30;
 int state;
@@ -45,35 +45,46 @@ void TimerHandler1() {
       durationF = pulseIn(frontUSEcho, HIGH);
       distanceF = (durationF * .0343) / 2;
       Serial.println(distanceF);
+      Serial.println("F");
       if (distanceF < wallDistance) {
         digitalWrite(frontOUT, HIGH);
+        digitalWrite(frontOUT, LOW);
       }
     } else if (type == 2) {
       durationL = pulseIn(leftUSEcho, HIGH);
       distanceL = (durationL * .0343) / 2;
       Serial.println(distanceL);
+      Serial.println("L");
       if (distanceL < wallDistance){
         digitalWrite(leftOUT, HIGH);
+        digitalWrite(leftOUT, LOW);
       }
     } else if (type == 3) {
       durationR = pulseIn(rightUSEcho, HIGH);
       distanceR = (durationR * .0343) / 2;
       Serial.println(distanceR);
+      Serial.println("R");
       if (distanceR < wallDistance){
         digitalWrite(rightOUT, HIGH);
+        digitalWrite(rightOUT, LOW);
       }
     }
      else if (type == 4) {
       durationB = pulseIn(backUSEcho, HIGH);
       distanceB = (durationB * .0343) / 2;
       Serial.println(distanceB);
+      Serial.println("B");
       if (distanceB < wallDistance){
         digitalWrite(backOUT, HIGH);
+        digitalWrite(backOUT, LOW);
       }
+      type = 0;
     }
+    type++;
 
     count = 0;
-  }
+    }
+
 }
 
 void setup() {
