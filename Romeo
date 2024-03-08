@@ -1,0 +1,238 @@
+#define USE_TIMER_2 true
+#include <TimerInterrupt.h>
+
+#define leftUSTrig A0
+#define leftUSEcho 7
+
+#define rightUSTrig A3
+#define rightUSEcho 4
+
+#define frontRUSTrig A2
+#define frontRUSEcho 5
+
+#define frontLUSTrig A1
+#define frontLUSEcho 6
+
+#define backUSTrig A4
+#define backUSEcho 3
+
+int error = 3;
+
+float durationFR, distanceFR, durationFL, distanceFL, durationR, distanceR, durationL, distanceL, durationB, distanceB;
+#define MR_1 13
+#define MR_2 12
+#define MR_PWM 10
+
+#define ML_1 8
+#define ML_2 11
+#define ML_PWM 9
+
+int count = 0;
+int timer;
+int freq1 = 100;
+int stateU = LOW;
+int type = 0;
+
+volatile byte state;
+
+/*---------------State Definitions--------------------------*/
+typedef enum {
+  ORIENTING_A,
+  FORWARD,
+  LEFT,
+  STOP
+} States_t;
+
+void TimerHandler1() {
+  if (count == 0) {
+    stateU = HIGH;
+    digitalWrite(frontRUSTrig, stateU);
+    digitalWrite(frontLUSTrig, stateU);
+    digitalWrite(rightUSTrig, stateU);
+    digitalWrite(leftUSTrig, stateU);
+    digitalWrite(backUSTrig, stateU);
+  } else {
+    stateU = LOW;
+    digitalWrite(frontRUSTrig, stateU);
+    digitalWrite(frontLUSTrig, stateU);
+    digitalWrite(rightUSTrig, stateU);
+    digitalWrite(leftUSTrig, stateU);
+    digitalWrite(backUSTrig, stateU);
+  }
+  count++;
+  if (count == 2) {
+    if (type == 1) {
+      durationFR = pulseIn(frontRUSEcho, HIGH);
+      distanceFR = (durationFR * .0343) / 2;
+      
+    } else if (type == 2) {
+      durationFL = pulseIn(frontLUSEcho, HIGH);
+      distanceFL = (durationFL * .0343) / 2;
+
+    }  else if (type == 3) {
+      durationL = pulseIn(leftUSEcho, HIGH);
+      distanceL = (durationL * .0343) / 2;
+
+    } else if (type == 4) {
+      durationR = pulseIn(rightUSEcho, HIGH);
+      distanceR = (durationR * .0343) / 2;
+
+    }
+     else if (type == 5) {
+      durationB = pulseIn(backUSEcho, HIGH);
+      distanceB = (durationB * .0343) / 2;
+      type = 0;
+    }
+    type++;
+
+    count = 0;
+  }
+}
+
+void setup() {
+  // put your setup code here, to run once
+  pinMode(MR_1, OUTPUT);
+  pinMode(MR_2, OUTPUT);
+  pinMode(ML_PWM, OUTPUT);
+  pinMode(ML_1, OUTPUT);
+  pinMode(ML_2, OUTPUT);
+  pinMode(MR_PWM, OUTPUT);
+
+  pinMode(leftUSTrig, OUTPUT);
+  pinMode(leftUSEcho, INPUT);
+
+  pinMode(rightUSTrig, OUTPUT);
+  pinMode(rightUSEcho, INPUT);
+
+  pinMode(frontRUSTrig, OUTPUT);
+  pinMode(frontRUSEcho, INPUT);
+
+  pinMode(frontLUSTrig, OUTPUT);
+  pinMode(frontLUSEcho, INPUT);
+
+  pinMode(backUSTrig, OUTPUT);
+  pinMode(backUSEcho, INPUT);
+
+  analogWrite(MR_PWM, 0);
+  analogWrite(ML_PWM, 0);
+  digitalWrite(MR_1, 0);
+  digitalWrite(MR_2, 1);
+  digitalWrite(ML_1, 0);
+  digitalWrite(ML_2, 1);
+
+  Serial.begin(9600);
+  stateU = LOW;
+  state = ORIENTING_A;
+
+  ITimer2.init();
+  ITimer2.setFrequency(freq1, TimerHandler1);
+}
+
+void forward() {
+  if ((abs(distanceFR - distanceFL) <= error) && (distanceFR!= 0) && (distanceFL != 0)) {
+    Sforward();
+  }
+  if ((distanceFR - distanceFL > error) && (distanceFR!= 0) && (distanceFL != 0)) {
+    Lforward();
+
+  }
+  if ((distanceFR - distanceFL < (-error)) && (distanceFR!= 0) && (distanceFL != 0)){
+    Rforward();
+}
+}
+
+void stop(){
+  digitalWrite(MR_1, LOW);
+  digitalWrite(MR_2, LOW);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, LOW);
+  analogWrite(MR_PWM, 0);
+  analogWrite(ML_PWM, 0);
+}
+
+void left() {
+  digitalWrite(MR_1, LOW);
+  digitalWrite(MR_2, HIGH);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, HIGH);
+  analogWrite(MR_PWM, 250);
+  analogWrite(ML_PWM, 210);
+}
+void circleLeft() {
+  timer = millis();
+  while (millis() - timer < 100){
+    left();
+  }
+  timer = millis();
+  while (millis() - timer < 400){
+    stop();
+  }
+
+}
+
+void Sforward() {
+  digitalWrite(MR_1, HIGH);
+  digitalWrite(MR_2, LOW);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, HIGH);
+  analogWrite(MR_PWM, 160);
+  analogWrite(ML_PWM, 160);
+}
+
+void Lforward() {
+  digitalWrite(MR_1, HIGH);
+  digitalWrite(MR_2, LOW);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, HIGH);
+  analogWrite(MR_PWM, 170);
+  analogWrite(ML_PWM, 0);
+}
+
+void Rforward() {
+  digitalWrite(MR_1, HIGH);
+  digitalWrite(MR_2, LOW);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, HIGH);
+  analogWrite(MR_PWM, 0);
+  analogWrite(ML_PWM, 170);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  switch (state) {
+    case ORIENTING_A: 
+      circleLeft();
+      if ((distanceB < 25) && (distanceR < 25) && (distanceFR < 75) && (abs(distanceFR - distanceFL) <= 2)) {
+        state = FORWARD;
+      }
+      break;
+    case FORWARD:
+      forward();
+      if (distanceFR < 30) {
+        state = LEFT;
+      }
+      break;
+    case LEFT:
+      timer = millis();
+      Serial.println("HEREEEEEE");
+      while (millis() - timer < 800) {
+        circleLeft();
+        Serial.println("hiiiii");
+      }
+      while (abs(distanceFR - distanceFL) > 10){
+        Serial.println("YOOOOOO");
+        circleLeft();
+      }
+      state = STOP;
+
+    case STOP:
+      stop();
+      break;
+  }
+}
+
+          
+
+
+
+          
