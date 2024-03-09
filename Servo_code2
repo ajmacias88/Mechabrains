@@ -1,0 +1,18 @@
+#define SLIDEIN 2
+#include <Servo.h>
+
+Servo myservo;
+
+void setup() {
+  myservo.attach(6);
+
+}
+
+void loop() {
+  if (digitalRead(SLIDEIN) == 1) {
+    myservo.write(120);
+  }
+    else if (digitalRead(SLIDEIN) == 0) {
+    myservo.write(0);
+  }
+}
