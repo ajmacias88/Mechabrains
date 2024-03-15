@@ -1,222 +1,70 @@
+#include <Servo.h>
+
 #define USE_TIMER_2 true
 #include <TimerInterrupt.h>
 
-#define leftUSTrig A0
-#define leftUSEcho 7
+#define leftUSTrig A4
+#define leftUSEcho 8
 
-#define rightUSTrig A3
-#define rightUSEcho 4
+#define rightUSTrig A1
+#define rightUSEcho 12
 
 #define frontRUSTrig A2
-#define frontRUSEcho 5
+#define frontRUSEcho A5
 
-#define frontLUSTrig A1
-#define frontLUSEcho 6
+#define frontLUSTrig A3
+#define frontLUSEcho 13
 
-#define backUSTrig A4
-#define backUSEcho 3
+#define backUSTrig A0
+#define backUSEcho 11
 
-int type = 1;
-int freq1 = 100;
-int stateU;
-int celebrate = 0;
+#define IR A5
+
+int error = 2;
 
 float durationFR, distanceFR, durationFL, distanceFL, durationR, distanceR, durationL, distanceL, durationB, distanceB;
+#define MR_1 3
+#define MR_2 4
+#define MR_PWM 5
 
-#define LS A5
+#define ML_1 7
+#define ML_2 2
+#define ML_PWM 6
 
+int count = 0;
+int timer;
+int timer2;
+int freq1 = 100;
+int stateU = LOW;
+int type = 0;
 
-#define ARM A2
-#define SLIDE A3
+int servoPin = 10;
 
+// Create a servo object
+Servo myServo;
 
-#define MR_1 13
-#define MR_2 12
-#define MR_PWM 10
-
-
-#define ML_1 8
-#define ML_2 11
-#define ML_PWM 9
-
-
-#define TIMER_30 500    //30
-#define TIMER_60 400   //60
-#define TIMER_90 500    //90
-#define TIMER_120 500   //120
-#define TIMER_150 500   //150
-#define TIMER_180 500   //180
-#define LINEDELAY 1200  //ignore start box
-#define DELAY_2 200     // drive to contact zone
-#define DELAY_3 500     // drive to contact zone
-
-#define DARKLINE 700
+// Define the pin connected to the servo
 
 
 volatile byte state;
-int count = 0;
-int timer;
-
 
 /*---------------State Definitions--------------------------*/
 typedef enum {
-  ORIENTING_A,
-  LINE_FINDING_A,
-  STOP,
-  CONTACT_ZONE,
-  SHOOTING,
-  CELEBRATION,
-  MIDDLE,
-  LAST
+  ORIENTING,
+  FORWARD1,
+  LEFT1,
+  EXITING1,
+  ENTERING2,
+  LEFT2,
+  FORWARD2,
+  CONTACTZONE,
+  POSTCONTACT,
+  FULLAHEAD,
+  PREDART,
+  DART,
+  CELEB,
+  STOP
 } States_t;
-
-
-void backward() {
-  digitalWrite(MR_1, HIGH);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, HIGH);
-  analogWrite(MR_PWM, 255);
-  analogWrite(ML_PWM, 255);
-}
-
-void backward1() {
-  digitalWrite(MR_1, HIGH);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, HIGH);
-  analogWrite(MR_PWM, 255);
-  analogWrite(ML_PWM, 0);
-}
-
-void backward2() {
-  digitalWrite(MR_1, HIGH);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, HIGH);
-  analogWrite(MR_PWM, 0);
-  analogWrite(ML_PWM, 255);
-}
-
-void uturn() {
-  digitalWrite(MR_1, HIGH);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, HIGH);
-  analogWrite(MR_PWM, 255);
-  analogWrite(ML_PWM, 95);
-}
-
-void uturn1() {
-  digitalWrite(MR_1, HIGH);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, HIGH);
-  analogWrite(MR_PWM, 80);
-  analogWrite(ML_PWM, 255);
-}
-
-
-void forward() {
-  digitalWrite(MR_1, LOW);
-  digitalWrite(MR_2, HIGH);
-  digitalWrite(ML_1, HIGH);
-  digitalWrite(ML_2, LOW);
-  analogWrite(MR_PWM, 160);
-  analogWrite(ML_PWM, 190);
-}
-
-void Fforward() {
-  digitalWrite(MR_1, LOW);
-  digitalWrite(MR_2, HIGH);
-  digitalWrite(ML_1, HIGH);
-  digitalWrite(ML_2, LOW);
-  analogWrite(MR_PWM, 150);
-  analogWrite(ML_PWM, 150);
-}
-
-void forward2() {
-  digitalWrite(MR_1, LOW);
-  digitalWrite(MR_2, HIGH);
-  digitalWrite(ML_1, HIGH);
-  digitalWrite(ML_2, LOW);
-  analogWrite(MR_PWM, 0);
-  analogWrite(ML_PWM, 187);
-}
-
-void stop() {
-  digitalWrite(MR_1, LOW);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, LOW);
-  analogWrite(MR_PWM, 0);
-  analogWrite(ML_PWM, 0);
-}
-
-
-void left() {
-  digitalWrite(MR_1, LOW);
-  digitalWrite(MR_2, HIGH);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, HIGH);
-  analogWrite(MR_PWM, 200);
-  analogWrite(ML_PWM, 200);
-}
-
-void left1() {
-  digitalWrite(MR_1, LOW);
-  digitalWrite(MR_2, HIGH);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, HIGH);
-  analogWrite(MR_PWM, 150);
-  analogWrite(ML_PWM, 150);
-}
-
-
-void right() {
-  digitalWrite(MR_1, HIGH);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, HIGH);
-  digitalWrite(ML_2, LOW);
-  analogWrite(MR_PWM, 224);
-  analogWrite(ML_PWM, 220);
-}
-
-void right1() {
-  digitalWrite(MR_1, HIGH);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, HIGH);
-  digitalWrite(ML_2, LOW);
-  analogWrite(MR_PWM, 150);
-  analogWrite(ML_PWM, 150);
-}
-
-void Sforward() {
-  digitalWrite(MR_1, HIGH);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, HIGH);
-  analogWrite(MR_PWM, 160);
-  analogWrite(ML_PWM, 160);
-}
-
-void Lforward() {
-  digitalWrite(MR_1, HIGH);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, HIGH);
-  analogWrite(MR_PWM, 170);
-  analogWrite(ML_PWM, 0);
-}
-
-void Rforward() {
-  digitalWrite(MR_1, HIGH);
-  digitalWrite(MR_2, LOW);
-  digitalWrite(ML_1, LOW);
-  digitalWrite(ML_2, HIGH);
-  analogWrite(MR_PWM, 0);
-  analogWrite(ML_PWM, 170);
-}
 
 void TimerHandler1() {
   if (count == 0) {
@@ -239,16 +87,19 @@ void TimerHandler1() {
     if (type == 1) {
       durationFR = pulseIn(frontRUSEcho, HIGH);
       distanceFR = (durationFR * .0343) / 2;
-      Serial.println(distanceFR);
+      
     } else if (type == 2) {
       durationFL = pulseIn(frontLUSEcho, HIGH);
       distanceFL = (durationFL * .0343) / 2;
+
     }  else if (type == 3) {
       durationL = pulseIn(leftUSEcho, HIGH);
       distanceL = (durationL * .0343) / 2;
+
     } else if (type == 4) {
       durationR = pulseIn(rightUSEcho, HIGH);
       distanceR = (durationR * .0343) / 2;
+
     }
      else if (type == 5) {
       durationB = pulseIn(backUSEcho, HIGH);
@@ -262,6 +113,8 @@ void TimerHandler1() {
 }
 
 void setup() {
+  myServo.attach(servoPin);
+  myServo.write(65);
   // put your setup code here, to run once
   pinMode(MR_1, OUTPUT);
   pinMode(MR_2, OUTPUT);
@@ -285,10 +138,6 @@ void setup() {
   pinMode(backUSTrig, OUTPUT);
   pinMode(backUSEcho, INPUT);
 
-  pinMode(ARM, OUTPUT);
-  pinMode(SLIDE, OUTPUT);
-  pinMode(LS, INPUT);
-
   analogWrite(MR_PWM, 0);
   analogWrite(ML_PWM, 0);
   digitalWrite(MR_1, 0);
@@ -296,147 +145,308 @@ void setup() {
   digitalWrite(ML_1, 0);
   digitalWrite(ML_2, 1);
 
-  digitalWrite(SLIDE, LOW);
 
-
-  state = ORIENTING_A;
   Serial.begin(9600);
   stateU = LOW;
+  state = ORIENTING;
 
   ITimer2.init();
   ITimer2.setFrequency(freq1, TimerHandler1);
 }
 
+void forward() {
+  if ((abs(distanceFR - distanceFL) <= error) && (distanceFR!= 0) && (distanceFL != 0)) {
+    Sforward();
+  }
+  if ((distanceFR - distanceFL > error) && (distanceFR!= 0) && (distanceFL != 0)) {
+    Lforward();
+
+  }
+  if ((distanceFR - distanceFL < (-error)) && (distanceFR!= 0) && (distanceFL != 0)){
+    Rforward();
+}
+}
+
+void run(void){
+  digitalWrite(MR_1, LOW);
+  digitalWrite(MR_2, HIGH);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, HIGH);
+  analogWrite(MR_PWM, 230);
+  analogWrite(ML_PWM, 235);
+}
+
+void backUp(void) {
+  digitalWrite(MR_1, HIGH);
+  digitalWrite(MR_2, LOW);
+  digitalWrite(ML_1, HIGH);
+  digitalWrite(ML_2, LOW);
+  analogWrite(MR_PWM, 230);
+  analogWrite(ML_PWM, 215);
+}
+
+void backUpEND(void) {
+  digitalWrite(MR_1, HIGH);
+  digitalWrite(MR_2, LOW);
+  digitalWrite(ML_1, HIGH);
+  digitalWrite(ML_2, LOW);
+  analogWrite(MR_PWM, 0);
+  analogWrite(ML_PWM, 230);
+}
+
+void backUpCONTACT(void) {
+  digitalWrite(MR_1, HIGH);
+  digitalWrite(MR_2, LOW);
+  digitalWrite(ML_1, HIGH);
+  digitalWrite(ML_2, LOW);
+  analogWrite(MR_PWM, 230);
+  analogWrite(ML_PWM, 130);
+}
+
+void stop(void){
+  digitalWrite(MR_1, LOW);
+  digitalWrite(MR_2, LOW);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, LOW);
+  analogWrite(MR_PWM, 0);
+  analogWrite(ML_PWM, 0);
+}
+
+void left(void) {
+  digitalWrite(MR_1, LOW);
+  digitalWrite(MR_2, HIGH);
+  digitalWrite(ML_1, HIGH);
+  digitalWrite(ML_2, LOW);
+  analogWrite(MR_PWM, 255);
+  analogWrite(ML_PWM, 240);
+}
+
+
+void right(void) {
+  digitalWrite(MR_1, HIGH);
+  digitalWrite(MR_2, LOW);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, HIGH);
+  analogWrite(MR_PWM, 255);
+  analogWrite(ML_PWM, 255);
+}
+
+void circleLeft(void) {
+  timer = millis();
+  while (millis() - timer < 70){
+    right();
+  }
+  timer = millis();
+  while (millis() - timer < 300){
+    stop();
+  }
+}
+
+void circleRight(void) {
+  timer = millis();
+  while (millis() - timer < 70){
+    left();
+  }
+  timer = millis();
+  while (millis() - timer < 300){
+    stop();
+  }
+}
+
+
+void Sforward(void) {
+  digitalWrite(MR_1, LOW);
+  digitalWrite(MR_2, HIGH);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, HIGH);
+  analogWrite(MR_PWM, 200);
+  analogWrite(ML_PWM, 200);
+}
+
+void Lforward(void) {
+  digitalWrite(MR_1, LOW);
+  digitalWrite(MR_2, HIGH);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, HIGH);
+  analogWrite(MR_PWM, 200);
+  analogWrite(ML_PWM, 0);
+}
+
+void Rforward(void) {
+  digitalWrite(MR_1, LOW);
+  digitalWrite(MR_2, HIGH);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, HIGH);
+  analogWrite(MR_PWM, 0);
+  analogWrite(ML_PWM, 200);
+}
+
+void circleBackRight(void) {
+  timer = millis();
+  while (millis() - timer < 70){
+    backupRight();
+  }
+  timer = millis();
+  while (millis() - timer < 300){
+    stop();
+  }
+}
+
+void circleBackLeft(void) {
+  timer = millis();
+  while (millis() - timer < 70){
+    backupLeft();
+  }
+  timer = millis();
+  while (millis() - timer < 300){
+    stop();
+  }
+}
+
+void backupRight(void) {
+  digitalWrite(MR_1, LOW);
+  digitalWrite(MR_2, HIGH);
+  digitalWrite(ML_1, HIGH);
+  digitalWrite(ML_2, LOW);
+  analogWrite(MR_PWM, 255);
+  analogWrite(ML_PWM, 0);
+}
+
+void backupLeft(void) {
+  digitalWrite(MR_1, LOW);
+  digitalWrite(MR_2, HIGH);
+  digitalWrite(ML_1, LOW);
+  digitalWrite(ML_2, HIGH);
+  analogWrite(MR_PWM, 0);
+  analogWrite(ML_PWM, 255);
+}
+
+void finalTurn(void) {
+  digitalWrite(MR_1, HIGH);
+  digitalWrite(MR_2, LOW);
+  digitalWrite(ML_1, HIGH);
+  digitalWrite(ML_2, LOW);
+  analogWrite(MR_PWM, 50);
+  analogWrite(ML_PWM, 255);
+}
 
 void loop() {
-  // put your main code here, to run repeatedly:
   switch (state) {
-    case ORIENTING_A: 
-      left();
-      if (distanceR < 10 & distanceB < 10 & distanceR != 0 & distanceB != 0) {
-        timer = millis();
-        while (millis() - timer < TIMER_30) {
-          stop();
-        }
-        while (distanceB > 5) {
-          backward();
-          Serial.println(distanceB);
-        }
-        timer = millis();
-        while (millis() - timer < 800) {
-          backward1();
-        }
-        timer = millis();
-        while (millis() - timer < 800) {
-          backward2();
-        }
-        // timer = millis();
-        // while (millis() - timer < 300) {
-        //   backward1();
-        // }
-        Serial.println("backward");
-        Serial.println(distanceF);
-        while (distanceF1 > 25 && distanceF2 > 25) {
-          if (abs(distanceFR - distanceFL) <= 10) {
-            Sforward();
-          }
-          if (distanceFR - distanceFL > 10) {
-            Lfoward();
-
-          }
-          if (distanceFR - distanceFL < -10 ){
-            Rfoward();
-
-          }
-          
-          }
-
-
-          //TimerHandler1();
-          Serial.println(distanceF);
-        }
-  
-        Serial.println(distanceF);
-        timer = millis();
-        while (millis() - timer < 200) {
-          stop();
-        }
-        timer = millis();
-        while (millis() - timer < 2200) {
-          uturn();
-        }
-      state = CONTACT_ZONE;    
+    case ORIENTING: 
+      circleLeft();
+      if ((distanceB < 25) && (distanceR < 25) && (distanceFR < 75) && (abs(distanceFR - distanceFL) <= 2)) {
+        state = FORWARD1;
       }
+      break;
+
+    case FORWARD1:
+      forward();
+      if (distanceFR < 27 && distanceFR != 0) {
+        state = LEFT1;
+      }
+      break;
+
+    case LEFT1:
+      circleLeft();
+      if ((distanceB < 25) && (distanceR < 25) && (distanceFL > 80) && distanceFR > 80  && (abs(distanceFR - distanceFL) <= 2)) {
+        state = FORWARD2;
+      }
+      break;
+
+    case FORWARD2:
+      forward();
+      if (distanceFL < 52 && distanceFL != 0)  {
+        state = EXITING1;
+      }
+      break;
+
+  case EXITING1:
+    circleRight();
+    if ((abs(distanceFR - distanceFL) <= 4) && (distanceFL > 80) && distanceFR > 80 && distanceL < 49) {
+      state =ENTERING2;
+    }
     break;
+  
+  case ENTERING2:
+    timer = millis();
+    while (millis() - timer < 1100){
+    run();
+  }
     
-  case CONTACT_ZONE:
-    timer = millis();
-    while (millis() - timer < 300) {
-      right();
-    }
+    state = LEFT2;
+    break;
 
-    while (distanceF > 30 ) {
-      forward();
+  case LEFT2:
+    circleLeft();
+    if ((abs(distanceFR - distanceFL) <= 4) && (distanceFR < 64) && distanceFL < 64 && distanceFR != 0) {
+      state = CONTACTZONE;
     }
-    timer = millis();
-    while (millis() - timer < 600) {
-      stop();
-    }
-    timer = millis();
-    while (millis() - timer < 600) {
-      right1();
-    }
-    timer = millis();
-    while (millis() - timer < 600) {
-     stop();
-    }
-    state = MIDDLE;
     break;
   
-  case MIDDLE:
-    while (distanceF > 20 ) {
-      forward();
-    }
-    stop();
+  case CONTACTZONE:
+    error = 3;
+    forward();
+    if (distanceFR < 7 && distanceFR != 0) {
+      state = POSTCONTACT;
+      }
+    
+    break;
+
+  case POSTCONTACT:
+   timer = millis();
+   while (millis() - timer < 875) {
+      backUpCONTACT();
+    } 
+    
+    state = FULLAHEAD;
+    
+    break;
+
+
+  case FULLAHEAD:
+    error = 3;
+    forward();
+    if (distanceFR < 10 && distanceFR != 0) {
+      state = PREDART;
+      }
+    
+    break;
+
+  case PREDART:
     timer = millis();
-    while (millis() - timer < 600) {
-      left();
-    }
-    state = LAST;
+    while (millis() - timer < 1050) {
+      backUpEND();
+    }  
+   
+    
+      
+    state = DART;
+    break;
+
+  case DART:
+    timer2 = millis();
+    while (millis() - timer2 < 1700) {
+      run();
+    } 
+    myServo.write(150);
+    state = CELEB;
     break;
   
-  case LAST:
-    while (distanceF > 15 ) {
-      forward();
-    }
+  case CELEB:
+    count = 0;
+    while (count < 4){
     timer = millis();
-    while (millis() - timer < 600) {
-      forward();
+    while (millis() - timer < 500) {
+      myServo.write(65);
+    } 
+    timer2 = millis();
+    while (millis() - timer2 < 500) {
+      myServo.write(150);
     }
-    while (millis() - timer < 2000) {
-      stop();
+    count ++;
     }
-
-    state = CELEBRATION;
-    break;
-
-
-  case CELEBRATION:
-    digitalWrite(SLIDE, HIGH);
-    timer = millis();
-    while (millis() - timer < 100) {
-      digitalWrite(ARM, HIGH);
-    }
-    timer = millis();
-    while (millis() - timer < 100) {
-      digitalWrite(ARM, LOW);
-    }
-    celebrate++;
-    if (celebrate == 10) {
-      state = STOP;
-    }
-    break;
-
+    state = STOP;
+    break;    
   case STOP:
     stop();
     break;
