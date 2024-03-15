@@ -30,15 +30,16 @@ void setup() {
 
 
 void loop() {
-  if ((analogRead(IR1) < 400) & (analogRead(IR2) < 400) & (analogRead(IR3) < 400) & (analogRead(IR4) < 400)){
-    digitalWrite(MR_1, HIGH);
-    digitalWrite(MR_2, LOW);
-    digitalWrite(ML_1, HIGH);
-    digitalWrite(ML_2, LOW);
-    Serial.println("stopped");
-  }
-}
-
-
-
+  if ((analogRead(IR1) < 400)){
+    digitalWrite(MR_1, 1);
+    digitalWrite(MR_2, 0);
+    digitalWrite(ML_1, 1);
+    digitalWrite(ML_2, 0);
+    Serial.println("reverse");
+  } else {
+    digitalWrite(MR_1, 0);
+    digitalWrite(MR_2, 1);
+    digitalWrite(ML_1, 0);
+    digitalWrite(ML_2, 1);
+ }
 }
