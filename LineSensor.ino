@@ -37,13 +37,8 @@ void setup() {
 
 void loop() {
   Serial.println(analogRead(IR2));
-  analogWrite(MR_PWM, 140);
-  analogWrite(ML_PWM, 140);
-  if ((analogRead(IR1) < 400) & (analogRead(IR2) < 400) & (analogRead(IR3) < 400)){
-    digitalWrite(MR_1, LOW);
-    digitalWrite(MR_2, LOW);
-    digitalWrite(ML_1, LOW);
-    digitalWrite(ML_2, LOW);
-    Serial.println("stopped");
-  }
+  //Serial.println(analogRead(IR1));
+  //Serial.println(analogRead(IR3));
+  //Serial.println(analogRead(IR4));
+  
 }
